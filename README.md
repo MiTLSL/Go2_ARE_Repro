@@ -1,21 +1,15 @@
-# go2_demo 项目复现说明
+# Go2_demo 项目复现说明
 
 本文档感谢b站up 猫猫烤肉师傅
 本文档根据当前仓库代码和 `RoboGo2.pdf` 的本地识别结果整理，用于说明这个 Isaac Lab 项目的目标、代码结构、训练方式，以及如何围绕论文中的 Adaptive Energy Regularization 方法做 Go2 速度跟踪复现。
 
-当前项目目录：
+
+## 1. 论文核心思想
+
+`RoboGo2.pdf` 共 7 页。论文题目为：
 
 ```text
-C:\Users\Administrator\Desktop\Learning\Code\RobotProject\go2_demo
-```
-
-## 1. PDF 识别结果与论文核心思想
-
-`RoboGo2.pdf` 可以被本机 PyMuPDF 正常识别，共 7 页。论文题目为：
-
-```text
-Adaptive Energy Regularization for Autonomous Gait Transition and
-Energy-Efficient Quadruped Locomotion
+Adaptive Energy Regularization for Autonomous Gait Transition and Energy-Efficient Quadruped Locomotion
 ```
 
 作者在论文中研究的问题是：四足机器人速度跟踪任务中，是否可以减少复杂步态奖励和人工步态先验，只通过“速度跟踪 + 距离归一化能量奖励 + 少量安全辅助项”训练出可以自动切换步态的策略。
@@ -159,19 +153,11 @@ rsl_rl_cfg_entry_point = agents.rsl_rl_ppo_cfg:PPORunnerCfg
 source/go2_demo/go2_demo/assets/robot/unitree.py
 ```
 
-当前使用的模型是本地 Unitree Go2 USD：
+当前使用的模型是本地 Unitree Go2 USD 位置如下，实际模型可参考官方自带模型：
 
 ```text
 source/go2_demo/go2_demo/assets/robot/unitree_model/Go2/usd/go2.usd
 ```
-
-当前代码中 `UNITREE_MODEL_DIR` 是绝对路径：
-
-```python
-UNITREE_MODEL_DIR = "C:/Users/Administrator/Desktop/Learning/Code/RobotProject/go2_demo/source/go2_demo/go2_demo/assets/robot/unitree_model"
-```
-
-这在当前机器上可以使用，但如果换电脑或换目录，需要改成相对路径或基于 `__file__` 动态拼接。
 
 电机配置使用 `DCMotorCfg`，控制 12 个腿部关节：
 
@@ -537,24 +523,14 @@ model_*.pt
 
 ## 13. 安装与环境准备
 
-必须使用已经安装 Isaac Lab 的 Python 环境。你当前常用环境看起来是：
-
-```text
-D:\Anaconda\envs\env_isaaclab
-```
+必须使用已经安装 Isaac Lab 的 Python 环境。
 
 推荐 PowerShell 操作：
 
 ```powershell
 conda activate env_isaaclab
-cd C:\Users\Administrator\Desktop\Learning\Code\RobotProject\go2_demo
+cd ~\go2_demo
 python -m pip install -e .\source\go2_demo
-```
-
-如果没有通过普通 `python` 进入 Isaac Lab 环境，o应使用 Isaac Lab 提供的 Python 启动器，例如：
-
-```powershell
-C:\Users\Administrator\Desktop\Learning\Cde\isaaclab\isaaclab.bat -p -m pip install -e .\source\go2_demo
 ```
 
 常见错误：
@@ -582,19 +558,7 @@ python -c "import go2_demo; print(go2_demo.__file__)"
 先用少量环境确认能正常启动、机器人可视化、命令箭头和奖励没有报错：
 
 ```powershell
-python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --num_envs 32 --max_iterations 100 --run_name debug
-```
-
-如果要打开 GUI 看机器人：
-
-```powershell
-python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --num_envs 4 --max_iterations 100 --run_name gui_debug
-```
-
-如果显存不足，可以继续降低：
-
-```powershell
-python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --num_envs 1 --max_iterations 20 --run_name smoke_test
+python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --num_envs 32 --max_iterations 100 
 ```
 
 ### 14.2 正式训练
@@ -602,13 +566,7 @@ python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --num_envs 1 --max_itera
 当前默认配置是 4096 个环境和 50000 次迭代：
 
 ```powershell
-python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --run_name aer_go2
-```
-
-也可以显式指定：
-
-```powershell
-python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --num_envs 4096 --max_iterations 50000 --run_name aer_go2
+python .\scripts\rsl_rl\train.py --task Go2-velocity-v0
 ```
 
 ### 14.3 从 checkpoint 继续训练
@@ -649,136 +607,11 @@ python .\scripts\rsl_rl\play.py --task Go2-velocity-v0 --num_envs 1 --video --vi
 logs/rsl_rl/go2_demo/<run_folder>/exported/policy.pt
 logs/rsl_rl/go2_demo/<run_folder>/exported/policy.onnx
 ```
-
-## 16. 论文复现实验建议
-
-### 16.1 实验 A：无能量正则 baseline
-
-目的：观察无 AER 时机器人是否能跟踪速度，以及是否出现高能耗、不自然抖动、弹跳或倒退。
-
-建议设置：
-
-```text
-energy_new_actual.weight = 0.0
-run_name = no_energy
-```
-
-可通过代码修改或 Hydra override 完成：
-
-```powershell
-python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --num_envs 4096 --max_iterations 50000 --run_name no_energy rewards.energy_new_actual.weight=0.0
-```
-
-如果当前 Isaac Lab/Hydra 版本不接受该 override，就直接在 `go2_demo_velocity.py` 中把 `energy_new_actual` 的 `weight` 改为 `0.0`。
-
-### 16.2 实验 B：逐步增加能量正则
-
-目的：复现论文中“能量权重需要适中”的结论。
-
-推荐训练：
-
-```powershell
-python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --num_envs 4096 --max_iterations 50000 --run_name energy_025 rewards.energy_new_actual.weight=0.25
-python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --num_envs 4096 --max_iterations 50000 --run_name energy_050 rewards.energy_new_actual.weight=0.5
-python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --num_envs 4096 --max_iterations 50000 --run_name energy_100 rewards.energy_new_actual.weight=1.0
-```
-
-记录指标：
-
-```text
-平均 episode reward
-track_lin_vel_xy
-track_ang_vel_z
-energy_new_actual
-真实 vx 与 command vx 的误差
-真实 wz 与 command wz 的误差
-sum(|tau| * |qdot|)
-脚底接触序列
-```
-
-判断标准：
-
-1. 如果速度跟踪变差或机器人停住，能量项过强或辅助惩罚门控过强。
-2. 如果能量下降不明显，能量项过弱或动作/力矩惩罚已经主导。
-3. 如果机器人抖动明显，优先检查动作变化惩罚、关节 PD 参数、接触/脚滑惩罚和 reset 姿态。
-
-### 16.3 实验 C：不同速度下步态观察
-
-论文中重要现象是不同速度下自动切换步态。当前项目可以先在播放时观察随机命令，也可以固定速度范围进行训练或测试。
-
-建议测试速度：
-
-```text
-0.3 m/s
-0.5 m/s
-1.0 m/s
-1.5 m/s
-2.0 m/s
-2.5 m/s
-```
-
-观察内容：
-
-```text
-是否向命令箭头方向前进
-机身是否稳定
-四只脚接触顺序是否随速度变化
-是否出现弹跳、拖脚、倒退、原地抖动
-真实速度是否接近 command
-```
-
-### 16.4 实验 D：圆轨迹跟踪
-
-论文中圆轨迹测试使用：
-
-```text
-linear velocity = 1.0 m/s
-angular velocity = 0.5 rad/s
-target radius = 2 m
-```
-
-当前代码还没有专门的圆轨迹评估脚本，但可以通过固定命令速度并记录 robot root pose 实现。指标为：
-
-```text
-e(t) = |d(t) - 2|
-sum_t e(t)
-```
-
-其中 `d(t)` 是机器人位置到圆心的距离。
-
-### 16.5 实验 E：地形实验
-
-论文包含 rough slope 和 20 cm 台阶等地形测试。当前 `go2_demo_velocity.py` 使用的是 `terrain_type="plane"`，因此目前只能复现平地版本。
-
-若要复现地形实验，需要进一步添加：
-
-1. Isaac Lab terrain generator，例如 rough slope / random rough terrain。
-2. 更完整的 terrain curriculum。
-3. 高度扫描输入与地形 mesh 正确绑定。
-4. 地形难度、摩擦、质量扰动等 domain randomization。
-
-## 17. 当前代码与论文的主要差异
-
-| 项目 | 论文 | 当前代码 |
-| --- | --- | --- |
-| 机器人 | Unitree Go1 | Unitree Go2 |
-| 仿真框架 | IsaacGym / legged-gym 体系 | Isaac Lab Manager-Based RL |
-| RL 算法 | PPO | RSL-RL PPO |
-| 动作 | 12 关节位置命令 | 12 关节位置命令 |
-| 能量常数 | `sigma_en_x=1000`, `sigma_en_z=500` | 相同 |
-| 能量公式 | `exp(-power / generalized_distance)` | 相同思路，额外加速度 clamp |
-| 输入历史 | 过去 30 步 | 当前未启用 |
-| 地形 | 平地 + rough slope | 当前为平面 |
-| domain randomization | 摩擦、质量、观测噪声等 | 当前主要是观测噪声，摩擦/质量随机化未完整实现 |
-| 命令 curriculum | 从小范围逐步扩到大范围 | 当前 `ranges` 与 `limit_ranges` 一样，扩展效果有限 |
-| 步态奖励 | 无显式步态奖励 | 无显式步态奖励 |
-| 速度范围 | 论文可到更宽正负范围 | 当前 x 为 `0.2` 到 `3.0`，不含负向 x |
-
-## 18. 关于“机器人倒退、抖动、最后不动”的排查建议
+## 16. 关于“机器人倒退、抖动、最后不动”的排查建议
 
 你之前遇到的问题和论文中的现象有重叠，也有可能来自实现细节。建议按以下顺序排查。
 
-### 18.1 确认坐标系方向
+### 16.1 确认坐标系方向
 
 当前命令 `lin_vel_x=(0.2, 3.0)` 是正向 x 速度。如果机器人总是“倒退”去跟踪，最优先检查：
 
@@ -788,7 +621,7 @@ sum_t e(t)
 
 一个简单判断方法是播放时看命令箭头方向和机器人 base 坐标轴方向是否一致。
 
-### 18.2 暂时关闭 heading_command
+### 16.2 暂时关闭 heading_command
 
 当前：
 
@@ -809,7 +642,7 @@ reset yaw=(0.0, 0.0)
 
 确认直线前进正常后，再恢复 heading/yaw 随机化。
 
-### 18.3 先移除能量项，再逐步加回
+### 16.3 先移除能量项，再逐步加回
 
 论文明确指出能量权重过大可能导致不动。当前建议：
 
@@ -823,7 +656,7 @@ energy_new_actual.weight = 0.0
 0.25 -> 0.5 -> 1.0
 ```
 
-### 18.4 检查 AER 指数门控是否过强
+### 16.4 检查 AER 指数门控是否过强
 
 当前：
 
@@ -840,7 +673,7 @@ sigma_aux = 1.0
 
 或者先临时退回 Isaac Lab 默认的加和式 reward manager，确认基础速度跟踪没问题。
 
-### 18.5 先关掉过强惩罚
+### 16.5 先关掉过强惩罚
 
 当前比较强的惩罚包括：
 
@@ -852,7 +685,7 @@ undesired_contacts = -5.0
 
 如果机器人训练初期经常接触终止或 reward 被门控归零，可以先降低这些权重，等能稳定前进后再逐步加回。
 
-### 18.6 检查 actuator 参数
+### 16.6 检查 actuator 参数
 
 当前 Go2 电机参数：
 
@@ -865,21 +698,8 @@ velocity_limit = 30.0
 
 如果机器人抖动明显，可能需要调大 damping、降低 action scale、增加 action_rate 惩罚或检查 USD inertial/contact 参数。
 
-## 19. 推荐复现路线
 
-为了避免同时引入太多变量，推荐按下面顺序推进：
-
-1. `num_envs=1` GUI smoke test，确认模型、地面、命令箭头、接触传感器能启动。
-2. `energy_new_actual.weight=0.0`，只训练速度跟踪和基础稳定项。
-3. 固定 yaw reset，关闭 heading command，确认机器人视觉上向前走。
-4. 恢复 yaw 随机和 heading command。
-5. 加回 `energy_new_actual.weight=0.25`。
-6. 训练到足够迭代后观察步态和能耗。
-7. 尝试 `0.5`、`1.0` 的能量权重做消融。
-8. 修正 curriculum 初始范围，使速度命令从易到难扩大。
-9. 加入 terrain generator 和 domain randomization，复现论文地形实验。
-
-## 20. 最小可运行命令汇总
+## 17. 最小可运行命令汇总
 
 安装：
 
@@ -924,25 +744,3 @@ python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --num_envs 4096 --max_it
 ```powershell
 python .\scripts\rsl_rl\train.py --task Go2-velocity-v0 --num_envs 4096 --max_iterations 50000 --run_name energy_025 rewards.energy_new_actual.weight=0.25
 ```
-
-## 21. 当前仓库状态下的结论
-
-当前项目已经具备复现论文 AER 思路的关键骨架：
-
-1. Go2 模型已接入 Isaac Lab。
-2. `Go2-velocity-v0` 任务已注册。
-3. 速度命令、命令箭头 debug 可视化、高度扫描、接触传感器已配置。
-4. 论文核心能量奖励 `exp(-power / generalized_distance)` 已实现。
-5. 自定义 `AERRewardManager` 已实现正奖励与辅助惩罚的指数门控。
-6. RSL-RL PPO 训练和播放脚本已具备。
-
-但它还不是论文完整复现，主要缺口是：
-
-1. Go1 原模型和论文原始训练框架没有完全一致。
-2. 30 步历史观测未启用。
-3. 课程学习初始范围和上限范围目前相同，难以体现逐步扩展。
-4. 平地可跑，rough terrain 还未实现。
-5. domain randomization 还不完整。
-6. 机器人倒退/抖动/不动问题还需要从坐标系、heading command、AER 门控强度和奖励权重逐步排查。
-
-因此，最稳妥的复现策略是先完成平地正向速度跟踪，再逐步加入 AER、curriculum、domain randomization 和 terrain，而不是一开始就追求论文全部结果。
