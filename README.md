@@ -1,6 +1,6 @@
 # Go2_demo 项目
 
-本文档根据当前仓库代码和 `RoboGo2.pdf` 的本地识别结果整理，用于说明这个 Isaac Lab 项目的目标、代码结构、训练方式，以及如何围绕论文中的 Adaptive Energy Regularization 方法做 Go2 速度跟踪复现。
+本文档用于说明这个 Isaac Lab 项目的目标、代码结构、训练方式，以及如何围绕论文中的 Adaptive Energy Regularization 方法做 Go2 速度跟踪复现。
 
 
 ## 1. 论文核心思想
