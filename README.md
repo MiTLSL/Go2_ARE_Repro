@@ -1,7 +1,5 @@
-# Go2_demo 项目复现说明
+# Go2_demo 项目
 
-本文档感谢b站up 猫猫烤肉师傅\\
-相关参数和up不太一致，最终结果类似，成功训练相关参数收敛图像在Pics文件夹中有体现。\\
 本文档根据当前仓库代码和 `RoboGo2.pdf` 的本地识别结果整理，用于说明这个 Isaac Lab 项目的目标、代码结构、训练方式，以及如何围绕论文中的 Adaptive Energy Regularization 方法做 Go2 速度跟踪复现。
 
 
@@ -13,7 +11,7 @@
 Adaptive Energy Regularization for Autonomous Gait Transition and Energy-Efficient Quadruped Locomotion
 ```
 
-作者在论文中研究的问题是：四足机器人速度跟踪任务中，是否可以减少复杂步态奖励和人工步态先验，只通过“速度跟踪 + 距离归一化能量奖励 + 少量安全辅助项”训练出可以自动切换步态的策略。
+论文中研究的问题是：四足机器人速度跟踪任务中，是否可以减少复杂步态奖励和人工步态先验，只通过“速度跟踪 + 距离归一化能量奖励 + 少量安全辅助项”训练出可以自动切换步态的策略。
 
 论文的主要结论如下：
 
@@ -48,11 +46,9 @@ alpha_ang = 0.5
 alpha_en 可做 0.0、0.5、1.0、1.5 等消融实验
 ```
 
-这个仓库当前不是论文原始代码的完整复刻，而是把论文方法迁移到 Isaac Lab + RSL-RL + Unitree Go2 模型上的复现实验项目。
-
 ## 2. 项目目标
 
-本项目的主要目标是训练 Unitree Go2 机器人完成平面速度跟踪任务，并尝试复现论文中的 AER 思路：
+本项目的主要目标是训练 Unitree Go2 机器人完成平面速度跟踪任务：
 
 1. 使用 Isaac Lab 的 Manager-Based RL 环境组织场景、观测、动作、奖励、终止条件和课程学习。
 2. 使用 RSL-RL PPO 训练 12 关节位置控制策略。
